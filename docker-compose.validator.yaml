@@ -6,7 +6,7 @@ services:
   validator:
     container_name: numinous_validator
 
-    image: numinouslabs/numinous:0.0.2
+    image: numinouslabs/numinous:latest
     pull_policy: always
 
     platform: linux/amd64
@@ -27,6 +27,7 @@ services:
 
     environment:
       - INLINE_LOGS=1
+      - HOST_WALLET_PATH=${HOST_WALLET_PATH:-${HOME}/.bittensor/wallets}
 
     command: >
       bash -c "python neurons/validator.py

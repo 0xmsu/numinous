@@ -129,7 +129,58 @@ WALLET_HOTKEY=default
 
 **Save and exit**
 
-## 5. Start Validator
+## 5. Understanding Wallet Paths (Important)
+
+The validator runs inside a Docker container but needs to access your wallet files from the **host machine**. The `HOST_WALLET_PATH` environment variable tells the validator where to find wallets on your host filesystem.
+
+### Default Configuration
+
+The `docker-compose.validator.yaml` file is pre-configured with:
+
+```yaml
+environment:
+  - HOST_WALLET_PATH=${HOME}/.bittensor/wallets
+```
+
+This works for **most users** who store wallets in the standard Bittensor location (`~/.bittensor/wallets`).
+
+When you run docker compose:
+- `${HOME}` automatically expands to your home directory
+- For user `bob`: `/home/bob/.bittensor/wallets`
+- For user `root`: `/root/.bittensor/wallets`
+
+### Custom Wallet Location
+
+If you store wallets in a non-standard location, edit your `.env.validator` file:
+
+```bash
+# Add or change this line in .env.validator
+HOST_WALLET_PATH=/your/custom/path/to/wallets
+```
+
+Replace `/your/custom/path/to/wallets` with your actual wallet directory path on the host machine.
+
+### Verification
+
+Before starting, verify your wallet files exist at the expected location:
+
+```bash
+# Check wallet structure
+ls -la ~/.bittensor/wallets/${WALLET_NAME}/coldkey
+ls -la ~/.bittensor/wallets/${WALLET_NAME}/hotkeys/${WALLET_HOTKEY}
+
+# If files exist, you're ready to start!
+```
+
+### Troubleshooting
+
+If you see errors about wallet files not found:
+
+1. **Verify wallet path:** Check that `HOST_WALLET_PATH` matches where your wallets actually are
+2. **Check permissions:** Ensure wallet files are readable
+3. **Restart validator:** After changing `HOST_WALLET_PATH`, restart the validator
+
+## 6. Start Validator
 
 ```bash
 # Pull and start validator
