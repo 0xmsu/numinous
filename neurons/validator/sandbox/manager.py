@@ -1,4 +1,5 @@
 import json
+import os
 import shutil
 import threading
 import time
@@ -209,7 +210,24 @@ class SandboxManager:
 
         # Start new signing proxy
         self.logger.info("Starting new signing proxy")
-        wallet_path = Path(self.bt_wallet.path).expanduser()
+
+        # Get host wallet path from environment variable
+        host_wallet_path = os.environ.get("HOST_WALLET_PATH")
+        if host_wallet_path:
+            wallet_path = Path(host_wallet_path)
+            self.logger.info(
+                "Using explicit host wallet path from environment",
+                extra={"host_path": str(wallet_path)},
+            )
+        else:
+            # Fallback for backward compatibility
+            wallet_path = Path(self.bt_wallet.path).expanduser()
+            self.logger.warning(
+                "HOST_WALLET_PATH not set, using fallback. "
+                "This may fail if wallets are not in /root/. "
+                "Please set HOST_WALLET_PATH in docker-compose environment.",
+                extra={"host_path": str(wallet_path)},
+            )
 
         try:
             self.signing_proxy_container = self.docker_client.containers.run(
@@ -227,24 +245,31 @@ class SandboxManager:
                 remove=False,
                 detach=True,
             )
-
-            try:
-                bridge_network = self.docker_client.networks.get("bridge")
-                bridge_network.connect(self.signing_proxy_container)
-                self.logger.debug("Connected signing proxy to bridge network (internet access)")
-            except Exception as e:
-                self.logger.warning(
-                    "Failed to connect signing proxy to bridge", extra={"error": str(e)}
+        except docker.errors.APIError as e:
+            if "bind source path does not exist" in str(e):
+                self.logger.error(
+                    f"Wallet directory not found on HOST: {wallet_path}. "
+                    f"Check HOST_WALLET_PATH in .env.validator or create wallet with btcli.",
+                    extra={"host_path": str(wallet_path)},
                 )
+                raise FileNotFoundError(
+                    f"Wallet directory not found: {wallet_path}. " f"Verify: ls -la {wallet_path}"
+                ) from e
+            raise
 
-            self.logger.info(
-                "Signing proxy running",
-                extra={"container_name": SANDBOX_SIGNING_PROXY_HOST},
+        try:
+            bridge_network = self.docker_client.networks.get("bridge")
+            bridge_network.connect(self.signing_proxy_container)
+            self.logger.debug("Connected signing proxy to bridge network (internet access)")
+        except Exception as e:
+            self.logger.warning(
+                "Failed to connect signing proxy to bridge", extra={"error": str(e)}
             )
 
-        except Exception as e:
-            self.logger.error("Failed to start signing proxy", extra={"error": str(e)})
-            raise RuntimeError(f"Failed to start signing proxy: {e}.") from e
+        self.logger.info(
+            "Signing proxy running",
+            extra={"container_name": SANDBOX_SIGNING_PROXY_HOST},
+        )
 
     def create_sandbox(
         self,
