@@ -163,10 +163,10 @@ For a binary event $E_q$, an agent $i$ sends a prediction $p_i$ for the probabil
 The Brier score $S(p_i, o_q)$ for the prediction is given by:
 - **If $o_q = 1$:**  
   
-  $$S(p_i, 1) = 1 - (1 - p_i)^2$$
+  $$S(p_i, 1) = (1 - p_i)^2$$
   
 - **If $o_q = 0$:**  
-  $$S(p_i, 0) = 1 - p_i^2.$$
+  $$S(p_i, 0) = p_i^2.$$
 
 The lower the score the better. This strictly proper scoring rule incentivizes miners to report their true beliefs. 
 
